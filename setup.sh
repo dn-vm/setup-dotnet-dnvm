@@ -3,8 +3,18 @@
 # for subsequent GitHub Actions steps (PATH, DOTNET_ROOT) and step outputs.
 set -euo pipefail
 
-DOTNET_VERSION="${INPUT_DOTNET_VERSION:?dotnet-version input is required}"
+DOTNET_VERSION="${INPUT_DOTNET_VERSION:-}"
+GLOBAL_JSON_FILE="${INPUT_GLOBAL_JSON_FILE:-}"
 DNVM_VERSION="${INPUT_DNVM_VERSION:-1.1.2}"
+
+if [ -z "$DOTNET_VERSION" ] && [ -z "$GLOBAL_JSON_FILE" ]; then
+  echo "::error::One of 'dotnet-version' or 'global-json-file' is required." >&2
+  exit 1
+fi
+if [ -n "$DOTNET_VERSION" ] && [ -n "$GLOBAL_JSON_FILE" ]; then
+  echo "::error::'dotnet-version' and 'global-json-file' are mutually exclusive." >&2
+  exit 1
+fi
 
 # --- Resolve the dnvm runtime identifier (RID) for this runner ---------------
 os="${RUNNER_OS:-$(uname -s)}"
@@ -73,16 +83,40 @@ else
 fi
 
 # --- Install the requested SDK (idempotent: dnvm skips if already present) ---
-echo "Installing .NET SDK ${DOTNET_VERSION} into ${dnvm_home}"
-DNVM_HOME="$dnvm_home" "$dnvm_bin" install "$DOTNET_VERSION"
+if [ -n "$GLOBAL_JSON_FILE" ]; then
+  # dnvm restore reads a file named 'global.json' from the current directory
+  # upward. Point the cwd at the file's directory; if the file has a different
+  # name, stage a copy named global.json in a temp dir.
+  [ "$rid_os" = "win" ] && GLOBAL_JSON_FILE="$(cygpath -u "$GLOBAL_JSON_FILE")"
+  if [ ! -f "$GLOBAL_JSON_FILE" ]; then
+    echo "::error::global-json-file not found: $GLOBAL_JSON_FILE" >&2
+    exit 1
+  fi
+  gj_dir="$(cd "$(dirname "$GLOBAL_JSON_FILE")" && pwd)"
+  if [ "$(basename "$GLOBAL_JSON_FILE")" != "global.json" ]; then
+    gj_dir="$base_tmp/dnvm-globaljson"
+    mkdir -p "$gj_dir"
+    cp "$GLOBAL_JSON_FILE" "$gj_dir/global.json"
+  fi
+
+  echo "Restoring SDK from ${GLOBAL_JSON_FILE} into ${dnvm_home}"
+  ( cd "$gj_dir" && DNVM_HOME="$dnvm_home" "$dnvm_bin" restore )
+  # The resolved SDK (after roll-forward) is what the muxer selects for that
+  # global.json, so query it from the restore directory.
+  resolved_version="$( cd "$gj_dir" && DOTNET_ROOT="$dotnet_root" "$dotnet_exe" --version )"
+else
+  echo "Installing .NET SDK ${DOTNET_VERSION} into ${dnvm_home}"
+  DNVM_HOME="$dnvm_home" "$dnvm_bin" install "$DOTNET_VERSION"
+  resolved_version="$DOTNET_VERSION"
+fi
 
 # --- Wire up the environment for subsequent steps ---------------------------
 if [ -n "${GITHUB_PATH:-}" ]; then echo "$dotnet_root" >> "$GITHUB_PATH"; fi
 if [ -n "${GITHUB_ENV:-}" ]; then echo "DOTNET_ROOT=$dotnet_root" >> "$GITHUB_ENV"; fi
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
-  echo "dotnet-version=$DOTNET_VERSION" >> "$GITHUB_OUTPUT"
+  echo "dotnet-version=$resolved_version" >> "$GITHUB_OUTPUT"
   echo "dotnet-root=$dotnet_root" >> "$GITHUB_OUTPUT"
 fi
 
-echo "Installed .NET SDK ${DOTNET_VERSION}"
+echo "Installed .NET SDK ${resolved_version}"
 "$dotnet_exe" --version

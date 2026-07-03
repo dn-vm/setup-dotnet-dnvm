@@ -18,17 +18,28 @@ directory to skip re-downloads across runs.
 - run: dotnet --version
 ```
 
+Or install the version pinned by a `global.json` (roll-forward rules are applied):
+
+```yaml
+- uses: dn-vm/setup-dotnet-dnvm@v1
+  with:
+    global-json-file: global.json
+```
+
 ## Inputs
 
-| Name             | Required | Default        | Description                                             |
-|------------------|----------|----------------|---------------------------------------------------------|
-| `dotnet-version` | yes      |                | Exact .NET SDK version to install (e.g. `8.0.100`).     |
-| `dnvm-version`   | no       | `1.1.2`        | Version of dnvm to use as the install engine.           |
-| `install-dir`    | no       | `$HOME/.dnvm`  | `DNVM_HOME` directory the SDK is installed into.        |
+| Name               | Required | Default        | Description                                                       |
+|--------------------|----------|----------------|-------------------------------------------------------------------|
+| `dotnet-version`   | *        |                | Exact .NET SDK version to install (e.g. `8.0.100`).               |
+| `global-json-file` | *        |                | Path to a `global.json` whose SDK version is installed (with roll-forward). |
+| `dnvm-version`     | no       | `1.1.2`        | Version of dnvm to use as the install engine.                     |
+| `install-dir`      | no       | `$HOME/.dnvm`  | `DNVM_HOME` directory the SDK is installed into.                  |
 
-> **Note:** v1 supports **exact** SDK versions only. Floating versions and channels
-> (`latest`, `lts`, `8.0`, `8.0.1xx`), quality, `global.json`, and architecture selection
-> are planned for later releases.
+\* Provide exactly one of `dotnet-version` or `global-json-file`.
+
+> **Note:** v1 supports **exact** SDK versions and `global.json`. Floating versions and
+> channels (`latest`, `lts`, `8.0`, `8.0.1xx`), quality, and architecture selection are
+> planned for later releases.
 
 ## Outputs
 

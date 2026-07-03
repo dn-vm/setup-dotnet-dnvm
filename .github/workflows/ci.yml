@@ -41,3 +41,44 @@ jobs:
         run: |
           echo "DOTNET_ROOT=$DOTNET_ROOT"
           test -n "$DOTNET_ROOT"
+
+  test-global-json:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Write global.json
+        shell: bash
+        run: |
+          cat > global.json <<'EOF'
+          {
+            "sdk": {
+              "version": "8.0.100",
+              "rollForward": "latestPatch"
+            }
+          }
+          EOF
+
+      - name: Install SDK from global.json
+        id: setup
+        uses: ./
+        with:
+          global-json-file: global.json
+
+      - name: Verify roll-forward resolved a version
+        shell: bash
+        run: |
+          resolved="${{ steps.setup.outputs.dotnet-version }}"
+          echo "resolved dotnet-version: $resolved"
+          # Roll-forward may pick a newer patch (e.g. 8.0.101), so assert the band.
+          case "$resolved" in
+            8.0.1*) echo "ok" ;;
+            *) echo "unexpected version: $resolved"; exit 1 ;;
+          esac
+          installed="$(dotnet --version)"
+          echo "dotnet --version: $installed"
+          test "$installed" = "$resolved"

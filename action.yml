@@ -7,8 +7,13 @@ branding:
 
 inputs:
   dotnet-version:
-    description: 'Exact .NET SDK version to install (e.g. 8.0.100).'
-    required: true
+    description: 'Exact .NET SDK version to install (e.g. 8.0.100). Mutually exclusive with global-json-file.'
+    required: false
+    default: ''
+  global-json-file:
+    description: 'Path to a global.json whose SDK version should be installed (with roll-forward). Mutually exclusive with dotnet-version.'
+    required: false
+    default: ''
   dnvm-version:
     description: 'Version of dnvm to use as the install engine.'
     required: false
@@ -33,6 +38,7 @@ runs:
       shell: bash
       env:
         INPUT_DOTNET_VERSION: ${{ inputs.dotnet-version }}
+        INPUT_GLOBAL_JSON_FILE: ${{ inputs.global-json-file }}
         INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
       run: bash "$GITHUB_ACTION_PATH/setup.sh"
