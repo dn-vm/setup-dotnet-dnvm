@@ -42,6 +42,28 @@ directory to skip re-downloads across runs.
 - Prepends the SDK directory to `PATH`.
 - Sets `DOTNET_ROOT`.
 
+## Caching
+
+Like [`actions/setup-dotnet`](https://github.com/actions/setup-dotnet), the SDK is
+downloaded on each run. `setup-dotnet`'s `cache` input caches the **NuGet global-packages
+folder** (`~/.nuget/packages`), *not* the SDK — you can do the same here with
+[`actions/cache`](https://github.com/actions/cache), independently of this action.
+
+Because dnvm tracks installed SDKs in a manifest, you can *optionally* also cache the
+install directory to skip the SDK download on a cache hit — something `setup-dotnet` cannot
+easily do:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: ~/.dnvm
+    key: dnvm-${{ runner.os }}-${{ runner.arch }}-8.0.100
+
+- uses: dn-vm/setup-dotnet-dnvm@v1
+  with:
+    dotnet-version: '8.0.100'
+```
+
 ## Platform support
 
 | OS      | x64 | arm64 |
