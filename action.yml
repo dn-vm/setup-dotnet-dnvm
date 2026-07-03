@@ -1,0 +1,38 @@
+name: 'Setup .NET (dnvm)'
+description: 'Install a specific .NET SDK version using dnvm.'
+author: 'dn-vm'
+branding:
+  icon: 'play'
+  color: 'purple'
+
+inputs:
+  dotnet-version:
+    description: 'Exact .NET SDK version to install (e.g. 8.0.100).'
+    required: true
+  dnvm-version:
+    description: 'Version of dnvm to use as the install engine.'
+    required: false
+    default: '1.1.2'
+  install-dir:
+    description: 'DNVM_HOME directory the SDK is installed into. Defaults to $HOME/.dnvm.'
+    required: false
+    default: ''
+
+outputs:
+  dotnet-version:
+    description: 'The installed .NET SDK version.'
+    value: ${{ steps.setup.outputs.dotnet-version }}
+  dotnet-root:
+    description: 'DOTNET_ROOT of the installed SDK.'
+    value: ${{ steps.setup.outputs.dotnet-root }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: setup
+      shell: bash
+      env:
+        INPUT_DOTNET_VERSION: ${{ inputs.dotnet-version }}
+        INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
+        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
+      run: bash "$GITHUB_ACTION_PATH/setup.sh"

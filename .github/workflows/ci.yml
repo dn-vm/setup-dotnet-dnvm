@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDK via action
+        id: setup
+        uses: ./
+        with:
+          dotnet-version: '8.0.100'
+
+      - name: Verify output
+        shell: bash
+        run: |
+          echo "output dotnet-version: ${{ steps.setup.outputs.dotnet-version }}"
+          test "${{ steps.setup.outputs.dotnet-version }}" = "8.0.100"
+
+      - name: Verify dotnet on PATH
+        shell: bash
+        run: |
+          which dotnet
+          installed="$(dotnet --version)"
+          echo "dotnet --version: $installed"
+          test "$installed" = "8.0.100"
+
+      - name: Verify DOTNET_ROOT
+        shell: bash
+        run: |
+          echo "DOTNET_ROOT=$DOTNET_ROOT"
+          test -n "$DOTNET_ROOT"
