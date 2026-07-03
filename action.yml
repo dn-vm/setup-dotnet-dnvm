@@ -26,15 +26,16 @@ inputs:
 outputs:
   dotnet-version:
     description: 'The installed .NET SDK version.'
-    value: ${{ steps.setup.outputs.dotnet-version }}
+    value: ${{ steps.setup-nix.outputs.dotnet-version || steps.setup-win.outputs.dotnet-version }}
   dotnet-root:
     description: 'DOTNET_ROOT of the installed SDK.'
-    value: ${{ steps.setup.outputs.dotnet-root }}
+    value: ${{ steps.setup-nix.outputs.dotnet-root || steps.setup-win.outputs.dotnet-root }}
 
 runs:
   using: 'composite'
   steps:
-    - id: setup
+    - id: setup-nix
+      if: runner.os != 'Windows'
       shell: bash
       env:
         INPUT_DOTNET_VERSION: ${{ inputs.dotnet-version }}
@@ -42,3 +43,13 @@ runs:
         INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
       run: bash "$GITHUB_ACTION_PATH/setup.sh"
+
+    - id: setup-win
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        INPUT_DOTNET_VERSION: ${{ inputs.dotnet-version }}
+        INPUT_GLOBAL_JSON_FILE: ${{ inputs.global-json-file }}
+        INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
+        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
+      run: & "$env:GITHUB_ACTION_PATH/setup.ps1"
