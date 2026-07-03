@@ -32,7 +32,7 @@ Or install the version pinned by a `global.json` (roll-forward rules are applied
 |--------------------|----------|----------------|-------------------------------------------------------------------|
 | `dotnet-version`   | *        |                | Exact .NET SDK version to install (e.g. `8.0.100`).               |
 | `global-json-file` | *        |                | Path to a `global.json` whose SDK version is installed (with roll-forward). |
-| `dnvm-version`     | no       | `1.1.2`        | Version of dnvm to use as the install engine.                     |
+| `dnvm-version`     | no       | `1.1.2`        | dnvm version used as the install engine. **Windows only** — on Linux/macOS the latest dnvm is fetched from [`dnvm.net/install.sh`](https://dnvm.net/install.sh). |
 | `install-dir`      | no       | `$HOME/.dnvm`  | `DNVM_HOME` directory the SDK is installed into.                  |
 
 \* Provide exactly one of `dotnet-version` or `global-json-file`.

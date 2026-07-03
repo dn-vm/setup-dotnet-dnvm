@@ -6,7 +6,6 @@ set -euo pipefail
 
 DOTNET_VERSION="${INPUT_DOTNET_VERSION:-}"
 GLOBAL_JSON_FILE="${INPUT_GLOBAL_JSON_FILE:-}"
-DNVM_VERSION="${INPUT_DNVM_VERSION:-1.1.2}"
 
 if [ -z "$DOTNET_VERSION" ] && [ -z "$GLOBAL_JSON_FILE" ]; then
   echo "::error::One of 'dotnet-version' or 'global-json-file' is required." >&2
@@ -17,41 +16,23 @@ if [ -n "$DOTNET_VERSION" ] && [ -n "$GLOBAL_JSON_FILE" ]; then
   exit 1
 fi
 
-# --- Resolve the dnvm runtime identifier (RID) for this runner ---------------
-os="${RUNNER_OS:-$(uname -s)}"
-arch="${RUNNER_ARCH:-$(uname -m)}"
-
-case "$os" in
-  Linux)        rid_os=linux ;;
-  macOS|Darwin) rid_os=osx ;;
-  *) echo "::error::Unsupported OS: $os" >&2; exit 1 ;;
-esac
-
-case "$arch" in
-  X64|x64|x86_64|amd64) rid_arch=x64 ;;
-  ARM64|arm64|aarch64)  rid_arch=arm64 ;;
-  *) echo "::error::Unsupported architecture: $arch" >&2; exit 1 ;;
-esac
-
-rid="$rid_os-$rid_arch"
-url="https://github.com/dn-vm/dnvm/releases/download/v${DNVM_VERSION}/dnvm-${DNVM_VERSION}-${rid}.tar.gz"
-
-# --- Download and extract the dnvm binary -----------------------------------
-tooldir="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/dnvm-bin"
-mkdir -p "$tooldir"
-archive="$tooldir/dnvm.tar.gz"
-
-echo "Downloading dnvm ${DNVM_VERSION} for ${rid}"
-curl -fsSL -o "$archive" "$url"
-tar -xzf "$archive" -C "$tooldir"
-dnvm_bin="$tooldir/dnvm"
-chmod +x "$dnvm_bin"
-
 # --- Resolve DNVM_HOME ------------------------------------------------------
 dnvm_home="${INPUT_INSTALL_DIR:-$HOME/.dnvm}"
 mkdir -p "$dnvm_home"
+export DNVM_HOME="$dnvm_home"
 dotnet_root="$dnvm_home/dn"
 dotnet_exe="$dotnet_root/dotnet"
+dnvm_bin="$dnvm_home/dnvm"
+
+# --- Bootstrap the dnvm binary via the hosted installer ---------------------
+# https://dnvm.net/install.sh handles RID detection, TLS-hardened download and
+# archive extraction for us. '-y --skip-tracking' installs only the dnvm binary
+# (under DNVM_HOME) without prompting or installing any SDK. selfinstall errors
+# if dnvm is already present, so skip the bootstrap on a cache hit.
+if [ ! -x "$dnvm_bin" ]; then
+  echo "Bootstrapping dnvm into ${dnvm_home}"
+  curl --proto '=https' -sSf https://dnvm.net/install.sh | sh -s -- -y --skip-tracking
+fi
 
 # --- Install the requested SDK (idempotent: dnvm skips if already present) ---
 if [ -n "$GLOBAL_JSON_FILE" ]; then
@@ -70,13 +51,13 @@ if [ -n "$GLOBAL_JSON_FILE" ]; then
   fi
 
   echo "Restoring SDK from ${GLOBAL_JSON_FILE} into ${dnvm_home}"
-  ( cd "$gj_dir" && DNVM_HOME="$dnvm_home" "$dnvm_bin" restore )
+  ( cd "$gj_dir" && "$dnvm_bin" restore )
   # The resolved SDK (after roll-forward) is what the muxer selects for that
   # global.json, so query it from the restore directory.
   resolved_version="$( cd "$gj_dir" && DOTNET_ROOT="$dotnet_root" "$dotnet_exe" --version )"
 else
   echo "Installing .NET SDK ${DOTNET_VERSION} into ${dnvm_home}"
-  DNVM_HOME="$dnvm_home" "$dnvm_bin" install "$DOTNET_VERSION"
+  "$dnvm_bin" install "$DOTNET_VERSION"
   resolved_version="$DOTNET_VERSION"
 fi
 

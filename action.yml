@@ -15,7 +15,7 @@ inputs:
     required: false
     default: ''
   dnvm-version:
-    description: 'Version of dnvm to use as the install engine.'
+    description: 'Version of dnvm to use as the install engine (Windows only; the Unix path always uses the latest dnvm from https://dnvm.net/install.sh).'
     required: false
     default: '1.1.2'
   install-dir:
@@ -40,7 +40,6 @@ runs:
       env:
         INPUT_DOTNET_VERSION: ${{ inputs.dotnet-version }}
         INPUT_GLOBAL_JSON_FILE: ${{ inputs.global-json-file }}
-        INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
       run: bash "$GITHUB_ACTION_PATH/setup.sh"
 
