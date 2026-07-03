@@ -43,9 +43,14 @@ archive="$tooldir/dnvm.${ext}"
 
 echo "Downloading dnvm ${DNVM_VERSION} for ${rid}"
 curl -fsSL -o "$archive" "$url"
-# bsdtar (the `tar` on all GitHub runners, including Windows) handles both
-# .tar.gz and .zip archives.
-tar -xf "$archive" -C "$tooldir"
+# Git Bash's `tar` is GNU tar (no zip support), so extract the Windows .zip with
+# PowerShell's Expand-Archive; use tar for the Unix .tar.gz.
+if [ "$ext" = "zip" ]; then
+  powershell -NoProfile -NonInteractive -Command \
+    "Expand-Archive -LiteralPath '$(cygpath -w "$archive")' -DestinationPath '$(cygpath -w "$tooldir")' -Force"
+else
+  tar -xzf "$archive" -C "$tooldir"
+fi
 dnvm_bin="$tooldir/$exe"
 [ "$rid_os" = "win" ] || chmod +x "$dnvm_bin"
 
