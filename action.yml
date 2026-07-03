@@ -52,4 +52,5 @@ runs:
         INPUT_GLOBAL_JSON_FILE: ${{ inputs.global-json-file }}
         INPUT_DNVM_VERSION: ${{ inputs.dnvm-version }}
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
-      run: & "$env:GITHUB_ACTION_PATH/setup.ps1"
+      run: |
+        & "$env:GITHUB_ACTION_PATH/setup.ps1"
